@@ -14,7 +14,7 @@ oasisad_pre(
   segmentation = FALSE,
   dir = NULL,
   cores = 1,
-  verbose = NULL
+  verbose = TRUE
 )
 }
 \arguments{
@@ -44,4 +44,45 @@ preprocessed image data
 }
 \description{
 MRI image data preprocessing with multiple inputs
+}
+\examples{
+library(neurobase)
+dl_file = function(url) {
+   tfile = file.path(tempdir(), basename(url))
+   if (!file.exists(tfile)) {
+      if (requireNamespace("httr", quietly = TRUE)) {
+          req <- httr::GET(url,
+          httr::write_disk(path = tfile))
+          httr::stop_for_status(req)
+      } else {
+         download.file(url, destfile = tfile)
+      }
+   }
+   tfile
+}
+in_ci <- function() {
+ nzchar(Sys.getenv("CI"))
+}
+on_cran = function() {
+ identical(Sys.getenv("NOT_CRAN"), "false")
+}
+if (in_ci() || on_cran()) {
+  if (fslr::have.fsl()) {
+    mods = c("FLAIR", "T1W", "T2W", "consensus_gt", "brainmask")
+    base_url = file.path(
+      "https://raw.githubusercontent.com/muschellij2/open_ms_data",
+      "master/cross_sectional/coregistered/patient01/")
+    files = paste0(base_url, mods, ".nii.gz")
+    files = sapply(files, dl_file)
+    names(files) = mods
+
+    flair <- readnii(files["FLAIR"])
+    t1 <- readnii(files["T1W"])
+    t2 <- readnii(files["T2W"])
+    brain_mask <- readnii(files["brainmask"])
+    gold_standard = readnii(files["consensus_gt"])
+    oasis_preprocessed_data <- oasisad_pre(flair, t1, t2,
+      brain_mask = brain_mask)
+  }
+}
 }
