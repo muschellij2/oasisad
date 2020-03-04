@@ -53,7 +53,7 @@
 #'     brain_mask <- readnii(files["brainmask"])
 #'     gold_standard = readnii(files["consensus_gt"])
 #'     oasis_preprocessed_data <- oasisad_pre(flair, t1, t2,
-#'       brain_mask = brain_mask)
+#'       brain_mask = brain_mask, verbose = 2)
 #'   }
 #' }
 oasisad_pre <- function(flair, #flair volume of class nifti
@@ -101,13 +101,6 @@ oasisad_pre <- function(flair, #flair volume of class nifti
       brain_mask <- fslbet(img_space, retimg = TRUE)
   }
 
-  #fast segmention by FSL
-  if(segmentation){
-    if (verbose) {
-      message("Running FAST for Segmentation")
-    }
-    fast_seg <- fast(file=brain_mask, outfile=dir, opts= "-N")
-  }
   brain_mask <- check_nifti(brain_mask)
   brain_mask <- brain_mask > 0
   brain_mask <- datatyper(brain_mask, trybyte = TRUE)
@@ -118,6 +111,25 @@ oasisad_pre <- function(flair, #flair volume of class nifti
   }
   study <- mclapply(study, mask_img, mask = brain_mask, mc.cores = cores)
   study$brain_mask <- brain_mask
+
+  if (is.null(dir)) {
+    dir = tempfile()
+    dir.create(dir)
+  }
+  #fast segmention by FSL
+  if (segmentation) {
+    if (verbose) {
+      message("Running FAST for Segmentation")
+    }
+    outfile = tempfile(tmpdir = dir)
+    fast_seg <- fast(file = study$t1,
+                     outfile = outfile,
+                     type = "T1",
+                     out_type = c("seg", "pve_2"),
+                     bias_correct = FALSE,
+                     all_images = TRUE)
+    study$fast = fast_seg
+  }
 
   ##return a list with the preprocessed images and a brain mask
   return(study)

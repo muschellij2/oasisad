@@ -82,7 +82,7 @@ if (in_ci() || on_cran()) {
     brain_mask <- readnii(files["brainmask"])
     gold_standard = readnii(files["consensus_gt"])
     oasis_preprocessed_data <- oasisad_pre(flair, t1, t2,
-      brain_mask = brain_mask)
+      brain_mask = brain_mask, verbose = 2)
   }
 }
 }
